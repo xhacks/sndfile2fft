@@ -18,7 +18,7 @@ Building
 ---------
 Something like the following should do it..
 
-gcc `pkg-config --cflags sndfile` -c somefile.c
+gcc -lfftw3 sndfile2fft.c -lsndfile -std=gnu99 -o sndfile2fft
 
 
 
