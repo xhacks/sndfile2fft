@@ -14,6 +14,14 @@ Requirements
     * (I came accross this issue when building from source: https://trac.macports.org/ticket/35358)
   * fftw
 
+Building
+---------
+Something like the following should do it..
+
+gcc `pkg-config --cflags sndfile` -c somefile.c
+
+
+
 Testing
 --------
 Only tested on OSX and a few recorded wav files (some with injected errors).
