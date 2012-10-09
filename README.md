@@ -10,7 +10,7 @@ It takes a wav file, runs an FFT, plots the output (using gnuplot), just some si
 Requirements
 -------------
   * Gnuplot for generating plots
-  * libsndfie (Version used 1.0.25)
+  * libsndfie (Version used 1.0.25) - http://www.mega-nerd.com/libsndfile/#Download
   * fftw
 
 Testing
