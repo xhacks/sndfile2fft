@@ -13,6 +13,11 @@ Requirements
   * libsndfie (Version used 1.0.25)
   * fftw
 
+Testing
+--------
+Only tested on OSX and a few recorded wav files (some with injected errors).
+
+
 TODO
 ----
   * Only for stereo really
