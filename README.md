@@ -11,6 +11,7 @@ Requirements
 -------------
   * Gnuplot for generating plots
   * libsndfie (Version used 1.0.25) - http://www.mega-nerd.com/libsndfile/#Download
+    * (I came accross this issue when building from source: https://trac.macports.org/ticket/35358)
   * fftw
 
 Testing
