@@ -1,35 +1,3 @@
-/*
-** Copyright (C) 2008-2011 Erik de Castro Lopo <erikd@mega-nerd.com>
-**
-** All rights reserved.
-**
-** Redistribution and use in source and binary forms, with or without
-** modification, are permitted provided that the following conditions are
-** met:
-**
-**     * Redistributions of source code must retain the above copyright
-**       notice, this list of conditions and the following disclaimer.
-**     * Redistributions in binary form must reproduce the above copyright
-**       notice, this list of conditions and the following disclaimer in
-**       the documentation and/or other materials provided with the
-**       distribution.
-**     * Neither the author nor the names of any contributors may be used
-**       to endorse or promote products derived from this software without
-**       specific prior written permission.
-**
-** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-** "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-** TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-** PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
-** CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-** EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-** PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
-** OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-** WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-** OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-** ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,9 +7,6 @@
 #include <sndfile.h>
 #include "fftw3.h"
 char 		*progname, *infilename, *outfilename ;
-
-// Find enerygy in peak - save +/- 1 bin.
-// find energy out of peak.
 
 // TODO run with larges and small window?
 
@@ -111,9 +76,9 @@ int g_blockCount = 0;
 
 static void
 print_usage (char *progname)
-{	fprintf (stderr, "\nUsage : %s <input file> <output file> <expected freq>\n", progname) ;
+{	fprintf (stderr, "\nUsage : %s <input file> <output file >\n", progname) ;
 	puts ("\n"
-		"    Where the output file will contain a line for each frame\n"
+		"    Where the output file will contain a line for each freq bin\n"
 		"    and a column for each channel.\n"
 		) ;
 
@@ -206,10 +171,7 @@ static int doBlock(float buf[], int readcount, int lastIndex)
     return index;
 }
 
-
-
-static void
-convert_to_text (SNDFILE * infile, FILE * outfile, int channels)
+static void convert_to_fft(SNDFILE * infile, FILE * outfile, int channels)
 {	
     float buf1 [channels * BLOCK_SIZE] ;
 	float buf2 [channels * BLOCK_SIZE] ;
@@ -221,7 +183,6 @@ convert_to_text (SNDFILE * infile, FILE * outfile, int channels)
     int seconds = 0;
     int firstRun = 1;
     double mult;
-
 
     // Init peak hold
     for(int i = 0; i < BLOCK_SIZE; i++)
@@ -297,17 +258,16 @@ convert_to_text (SNDFILE * infile, FILE * outfile, int channels)
 
     } ;
  
-   FILE *fftout = fopen ("fftout.txt", "w");
 
     /* Print out the output */
     for(int i = 0; i < BLOCK_SIZE; i++)
     {
-        fprintf(fftout, "%10d %10g %10g ", (int)(i*g_div), mag[i], input[i]);
+        fprintf(outfile, "%10d ", (int)(i*g_div));
         for(int c = 0; c<g_channels; c++)
         {
-            fprintf(fftout, "%10g ", peakhold[c][i]);
+            fprintf(outfile, "%10g ", peakhold[c][i]);
         }
-        fprintf(fftout, "\n");
+        fprintf(outfile, "\n");
     }
 
 #define PEAK_RANGE 5
@@ -352,93 +312,99 @@ convert_to_text (SNDFILE * infile, FILE * outfile, int channels)
         }
 
     }
-    fprintf(stderr, "\n");
-
-    FILE *pipe = popen("gnuplot ","w");
-    fprintf(pipe, "set xtic auto; set ytic auto; set title 'Spectrum (%s)'; set ylabel 'Relative Amp (dB)'; \
-        set xlabel 'Freq (Hz)'; set xr[0:20000]; set yr [-140:1];",infilename );
-
-// set xr [0:25000]
-
-    fprintf(pipe, "set arrow from %d,-140 to %d,-120 lc rgb 'red';", g_peakIndex[0], g_peakIndex[0]);
-    fprintf(pipe, "set label '%d Hz' at %d,-138;", g_peakIndex[0], g_peakIndex[0]);
-
-    fprintf(pipe, "set arrow from %d,-140 to %d,-120 lc rgb 'navy';", g_peakIndex[1], g_peakIndex[1]);
-    fprintf(pipe, "set label '%d Hz' at %d,-138;", g_peakIndex[1], g_peakIndex[1]);
-
-    fprintf(pipe, "set arrow from 1,%d to 20000, %d lc rgb 'red' nohead ;", (int)otherEnergy[0], (int)otherEnergy[0]);
-    fprintf(pipe, "set arrow from 1,%d to 20000, %d lc rgb 'navy' nohead ;", (int)otherEnergy[1], (int)otherEnergy[1]);
-
-    fprintf(pipe, "plot 'fftout.txt' using 1:4 title 'Left (peak hold)' with lines lc rgb 'red', \
-            'fftout.txt' using 1:5 title 'Right (peak hold)' with lines lc rgb 'navy'");
-
-    close(pipe);     
 
     return ;
-} /* convert_to_text */
+} /* convert_to_fft */
 
 int
 main (int argc, char * argv [])
-{		SNDFILE	 	*infile = NULL ;
+{		
+    SNDFILE	 	*infile = NULL ;
 	FILE		*outfile = NULL ;
 	SF_INFO	 	sfinfo ;
+
+    int  plot = 0;
 
 	progname = strrchr (argv [0], '/') ;
 	progname = progname ? progname + 1 : argv [0] ;
 
-	if (argc != 3)
-	{	print_usage (progname) ;
+	if (argc != 3 && argc != 4)
+	{	
+        print_usage (progname) ;
 		return 1 ;
-		} ;
+		
+    } ;
 
-	infilename = argv [1] ;
+    if(argc == 4)
+    {
+         if (strcmp(argv[3], "-p") == 0)  /* Process optional arguments. */
+        {
+            plot = 1;  /* This is used as a boolean value. */
+        }
+        else
+        {	
+            print_usage (progname) ;
+		    return 1 ;
+        }
+    }
+
+    infilename = argv [1] ;
 	outfilename = argv [2] ;
 
-
+    /* Some basic checking of command line.. */
 	if (strcmp (infilename, outfilename) == 0)
-	{	printf ("Error : Input and output filenames are the same.\n\n") ;
+	{	
+        printf ("Error : Input and output filenames are the same.\n\n") ;
 		print_usage (progname) ;
 		return 1 ;
-		} ;
-
-	if (infilename [0] == '-')
-	{	printf ("Error : Input filename (%s) looks like an option.\n\n", infilename) ;
-		print_usage (progname) ;
-		return 1 ;
-		} ;
-
-	if (outfilename [0] == '-')
-	{	printf ("Error : Output filename (%s) looks like an option.\n\n", outfilename) ;
-		print_usage (progname) ;
-		return 1 ;
-		} ;
+	} 
 
 	if ((infile = sf_open (infilename, SFM_READ, &sfinfo)) == NULL)
-	{	printf ("Not able to open input file %s.\n", infilename) ;
+	{	
+        printf ("Not able to open input file %s.\n", infilename) ;
 		puts (sf_strerror (NULL)) ;
 		return 1 ;
-		} ;
+	} 
 
 	/* Open the output file. */
 	if ((outfile = fopen (outfilename, "w")) == NULL)
-	{	printf ("Not able to open output file %s : %s\n", outfilename, sf_strerror (NULL)) ;
+	{	
+        printf ("Not able to open output file %s : %s\n", outfilename, sf_strerror (NULL)) ;
 		return 1 ;
-		} ;
+	} 
 
-	fprintf (outfile, "# Converted from file %s.\n", infilename) ;
-	fprintf (outfile, "# Channels %d, Sample rate %d\n", sfinfo.channels, sfinfo.samplerate) ;
-
-	fprintf (stderr, "Running from input file %s.\n", infilename) ;
-	fprintf (stderr, "Channels %d, Sample rate %d\n", sfinfo.channels, sfinfo.samplerate) ;
+	fprintf (stdout, "Running from input file %s.\n", infilename) ;
+	fprintf (stdout, "Channels %d, Sample rate %d\n", sfinfo.channels, sfinfo.samplerate) ;
  
     g_samplerate = sfinfo.samplerate;
     g_channels = sfinfo.channels; 
 
-    //BLOCK_SIZE = g_samplerate/DIV; 
     g_div = (double)g_samplerate/(double)(BLOCK_SIZE);
      
+	convert_to_fft(infile, outfile, sfinfo.channels) ;
 
-	convert_to_text (infile, outfile, sfinfo.channels) ;
+     if(plot)
+    {
+        FILE *pipe = popen("gnuplot ","w");
+        fprintf(pipe, "set xtic auto; set ytic auto; set title 'Spectrum (%s)'; set ylabel 'Relative Amp (dB)'; \
+        set xlabel 'Freq (Hz)'; set xr[0:20000]; set yr [-140:1];",infilename );
+
+        fprintf(pipe, "set arrow from %d,-140 to %d,-120 lc rgb 'red';", g_peakIndex[0], g_peakIndex[0]);
+        fprintf(pipe, "set label '%d Hz' at %d,-138;", g_peakIndex[0], g_peakIndex[0]);
+
+        fprintf(pipe, "set arrow from %d,-140 to %d,-120 lc rgb 'navy';", g_peakIndex[1], g_peakIndex[1]);
+        fprintf(pipe, "set label '%d Hz' at %d,-138;", g_peakIndex[1], g_peakIndex[1]);
+
+        fprintf(pipe, "set arrow from 1,%d to 20000, %d lc rgb 'red' nohead ;", (int)otherEnergy[0], (int)otherEnergy[0]);
+        fprintf(pipe, "set arrow from 1,%d to 20000, %d lc rgb 'navy' nohead ;", (int)otherEnergy[1], (int)otherEnergy[1]);
+
+        fprintf(pipe, "plot 'fftout.txt' using 1:4 title 'Left (peak hold)' with lines lc rgb 'red', \
+            'fftout.txt' using 1:5 title 'Right (peak hold)' with lines lc rgb 'navy'");
+
+        pclose(pipe);     
+    }
+
+
 
 	sf_close (infile) ;
 	fclose (outfile) ;
