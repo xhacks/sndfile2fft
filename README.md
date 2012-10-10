@@ -20,7 +20,12 @@ Something like the following should do it..
 
 gcc -lfftw3 sndfile2fft.c -lsndfile -std=gnu99 -o sndfile2fft
 
+Usage
+------
 
+sndfile2fft <input file> <output file>
+
+Where the output file will contain a line for each freq bin. First column freq value, then column for each channel.
 
 Testing
 --------
