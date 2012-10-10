@@ -398,8 +398,8 @@ main (int argc, char * argv [])
         fprintf(pipe, "set arrow from 1,%d to 20000, %d lc rgb 'red' nohead ;", (int)otherEnergy[0], (int)otherEnergy[0]);
         fprintf(pipe, "set arrow from 1,%d to 20000, %d lc rgb 'navy' nohead ;", (int)otherEnergy[1], (int)otherEnergy[1]);
 
-        fprintf(pipe, "plot 'fftout.txt' using 1:4 title 'Left (peak hold)' with lines lc rgb 'red', \
-            'fftout.txt' using 1:5 title 'Right (peak hold)' with lines lc rgb 'navy'");
+        fprintf(pipe, "plot '%s' using 1:2 title 'Left (peak hold)' with lines lc rgb 'red', \
+            '%s' using 1:3 title 'Right (peak hold)' with lines lc rgb 'navy'", outfilename, outfilename);
 
         pclose(pipe);     
     }
