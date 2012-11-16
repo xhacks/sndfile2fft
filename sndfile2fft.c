@@ -10,6 +10,8 @@ char 		*progname, *infilename, *outfilename ;
 
 // TODO run with larges and small window?
 
+#define GLITCH_THRESH (-85)
+
 #define MAX_BLOCK_SIZE  102400
 #define MAX_CHANS       10
 #define BLOCK_SIZE      (1024*8)
@@ -217,7 +219,7 @@ static void convert_to_fft(SNDFILE * infile, FILE * outfile, int channels)
         }
         else if(readcount != BLOCK_SIZE)
         {
-            fprintf(stderr, "Info: Dropped last block\n");
+            //fprintf(stderr, "Info: Dropped last block\n");
             break;
         }
 
@@ -240,7 +242,7 @@ static void convert_to_fft(SNDFILE * infile, FILE * outfile, int channels)
         }
         else if(readcount != BLOCK_SIZE)
         {
-            fprintf(stderr, "Info: Dropped last block\n");
+            //fprintf(stderr, "Info: Dropped last block\n");
             break;
         }
 
@@ -302,7 +304,7 @@ static void convert_to_fft(SNDFILE * infile, FILE * outfile, int channels)
  
         fprintf(stderr, "Channel %d : Peak found at approx %d Hz, Peak avg: %10g, Other Freqs: %10g\n", c, g_peakIndex[c], (peakEnergy[c]), otherEnergy[c]);
 
-        if(otherEnergy[c] > -85)
+        if(otherEnergy[c] > (GLITCH_THRESH))
         {
             fprintf(stderr, "Suspect glitch on this channel!\n\n");
         }
@@ -373,8 +375,8 @@ main (int argc, char * argv [])
 		return 1 ;
 	} 
 
-	fprintf (stdout, "Running from input file %s.\n", infilename) ;
-	fprintf (stdout, "Channels %d, Sample rate %d\n", sfinfo.channels, sfinfo.samplerate) ;
+	fprintf (stdout, "Running from input file: %s\n", infilename) ;
+	fprintf (stdout, "Channels: %d, Sample rate: %d\n\n", sfinfo.channels, sfinfo.samplerate) ;
  
     g_samplerate = sfinfo.samplerate;
     g_channels = sfinfo.channels; 
@@ -395,8 +397,8 @@ main (int argc, char * argv [])
         fprintf(pipe, "set arrow from %d,-140 to %d,-120 lc rgb 'navy';", g_peakIndex[1], g_peakIndex[1]);
         fprintf(pipe, "set label '%d Hz' at %d,-138;", g_peakIndex[1], g_peakIndex[1]);
 
-        fprintf(pipe, "set arrow from 1,%d to 20000, %d lc rgb 'red' nohead ;", (int)otherEnergy[0], (int)otherEnergy[0]);
-        fprintf(pipe, "set arrow from 1,%d to 20000, %d lc rgb 'navy' nohead ;", (int)otherEnergy[1], (int)otherEnergy[1]);
+        //fprintf(pipe, "set arrow from 1,%d to 20000, %d lc rgb 'red' nohead ;", (int)otherEnergy[0], (int)otherEnergy[0]);
+        //fprintf(pipe, "set arrow from 1,%d to 20000, %d lc rgb 'navy' nohead ;", (int)otherEnergy[1], (int)otherEnergy[1]);
 
         fprintf(pipe, "plot '%s' using 1:2 title 'Left (peak hold)' with lines lc rgb 'red', \
             '%s' using 1:3 title 'Right (peak hold)' with lines lc rgb 'navy'", outfilename, outfilename);
