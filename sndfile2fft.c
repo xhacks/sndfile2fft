@@ -5,10 +5,15 @@
 #include <math.h>
 
 #include <sndfile.h>
-#include "fftw3.h"
+#include <fftw3.h>
 char 		*progname, *infilename, *outfilename ;
 
 // TODO run with larges and small window?
+
+#define ONLY_TEST_AUDIBLE_RANGE 1
+#define AUDIBLE_RANGE_TOP 20000
+
+#define PLOT_AVERAGES 0
 
 #define GLITCH_THRESH (-85)
 
@@ -278,21 +283,25 @@ static void convert_to_fft(SNDFILE * infile, FILE * outfile, int channels)
         int othercount = 0;  
         int peakIndex = g_peakIndex[c];
        
-        for(int i = (-PEAK_RANGE); i< PEAK_RANGE;i++)
+        for(int i = (-PEAK_RANGE); i<= PEAK_RANGE;i++)
         {
             peakEnergy[c] += peakhold[c][g_peakIndex[c]+i];
+            //fprintf(stderr, "i: %d, peak: %10g\n", i, peakhold[c][g_peakIndex[c]+i]);
         }
         
         for(int i = 0; i < BLOCK_SIZE; i++)
         {
-            if((i < (peakIndex-PEAK_RANGE)) || (i > (peakIndex+PEAK_RANGE)))
+            if ((ONLY_TEST_AUDIBLE_RANGE && ((i * g_div) < AUDIBLE_RANGE_TOP)) || !ONLY_TEST_AUDIBLE_RANGE)
             {
-                if(peakhold[c][i] > -200)
+                if((i < (peakIndex-PEAK_RANGE)) || (i > (peakIndex+PEAK_RANGE)))
                 {
-                    otherEnergy[c] -= peakhold[c][i];
-                    othercount++;
+                    if(peakhold[c][i] > -200)
+                    {
+                        otherEnergy[c] -= peakhold[c][i];
+                        othercount++;
+                    }
                 }
-            } 
+            }
         }
 
         peakEnergy[c] /= (PEAK_RANGE*2+1);
@@ -385,11 +394,16 @@ main (int argc, char * argv [])
      
 	convert_to_fft(infile, outfile, sfinfo.channels) ;
 
-     if(plot)
+#if ONLY_TEST_AUDIBLE_RANGE
+#define PLOT_RANGE AUDIBLE_RANGE_TOP
+#else
+#define PLOT_RANGE MAX_BLOCK_SIZE
+#endif
+    if(plot)
     {
         FILE *pipe = popen("gnuplot ","w");
         fprintf(pipe, "set xtic auto; set ytic auto; set title 'Spectrum (%s)'; set ylabel 'Relative Amp (dB)'; \
-        set xlabel 'Freq (Hz)'; set xr[0:20000]; set yr [-140:1];",infilename );
+        set xlabel 'Freq (Hz)'; set xr[0:%d]; set yr [-140:1];", infilename, PLOT_RANGE);
 
         fprintf(pipe, "set arrow from %d,-140 to %d,-120 lc rgb 'red';", g_peakIndex[0], g_peakIndex[0]);
         fprintf(pipe, "set label '%d Hz' at %d,-138;", g_peakIndex[0], g_peakIndex[0]);
@@ -397,8 +411,10 @@ main (int argc, char * argv [])
         fprintf(pipe, "set arrow from %d,-140 to %d,-120 lc rgb 'navy';", g_peakIndex[1], g_peakIndex[1]);
         fprintf(pipe, "set label '%d Hz' at %d,-138;", g_peakIndex[1], g_peakIndex[1]);
 
-        //fprintf(pipe, "set arrow from 1,%d to 20000, %d lc rgb 'red' nohead ;", (int)otherEnergy[0], (int)otherEnergy[0]);
-        //fprintf(pipe, "set arrow from 1,%d to 20000, %d lc rgb 'navy' nohead ;", (int)otherEnergy[1], (int)otherEnergy[1]);
+#if PLOT_AVERAGES
+        fprintf(pipe, "set arrow from 1,%d to %d, %d lc rgb 'red' nohead ;", (int)otherEnergy[0], PLOT_RANGE, (int)otherEnergy[0]);
+        fprintf(pipe, "set arrow from 1,%d to %d, %d lc rgb 'navy' nohead ;", (int)otherEnergy[1], PLOT_RANGE, (int)otherEnergy[1]);
+#endif
 
         fprintf(pipe, "plot '%s' using 1:2 title 'Left (peak hold)' with lines lc rgb 'red', \
             '%s' using 1:3 title 'Right (peak hold)' with lines lc rgb 'navy'", outfilename, outfilename);
