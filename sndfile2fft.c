@@ -278,9 +278,10 @@ static void convert_to_fft(SNDFILE * infile, FILE * outfile, int channels)
         int othercount = 0;  
         int peakIndex = g_peakIndex[c];
        
-        for(int i = (-PEAK_RANGE); i< PEAK_RANGE;i++)
+        for(int i = (-PEAK_RANGE); i<= PEAK_RANGE;i++)
         {
             peakEnergy[c] += peakhold[c][g_peakIndex[c]+i];
+            //fprintf(stderr, "i: %d, peak: %10g\n", i, peakhold[c][g_peakIndex[c]+i]);
         }
         
         for(int i = 0; i < BLOCK_SIZE; i++)
