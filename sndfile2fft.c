@@ -5,7 +5,7 @@
 #include <math.h>
 
 #include <sndfile.h>
-#include "fftw3.h"
+#include <fftw3.h>
 char 		*progname, *infilename, *outfilename ;
 
 // TODO run with larges and small window?
