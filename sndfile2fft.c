@@ -13,6 +13,8 @@ char 		*progname, *infilename, *outfilename ;
 #define ONLY_TEST_AUDIBLE_RANGE 1
 #define AUDIBLE_RANGE_TOP 20000
 
+#define PLOT_AVERAGES 0
+
 #define GLITCH_THRESH (-85)
 
 #define MAX_BLOCK_SIZE  102400
@@ -409,8 +411,10 @@ main (int argc, char * argv [])
         fprintf(pipe, "set arrow from %d,-140 to %d,-120 lc rgb 'navy';", g_peakIndex[1], g_peakIndex[1]);
         fprintf(pipe, "set label '%d Hz' at %d,-138;", g_peakIndex[1], g_peakIndex[1]);
 
-        //fprintf(pipe, "set arrow from 1,%d to 20000, %d lc rgb 'red' nohead ;", (int)otherEnergy[0], (int)otherEnergy[0]);
-        //fprintf(pipe, "set arrow from 1,%d to 20000, %d lc rgb 'navy' nohead ;", (int)otherEnergy[1], (int)otherEnergy[1]);
+#if PLOT_AVERAGES
+        fprintf(pipe, "set arrow from 1,%d to %d, %d lc rgb 'red' nohead ;", (int)otherEnergy[0], PLOT_RANGE, (int)otherEnergy[0]);
+        fprintf(pipe, "set arrow from 1,%d to %d, %d lc rgb 'navy' nohead ;", (int)otherEnergy[1], PLOT_RANGE, (int)otherEnergy[1]);
+#endif
 
         fprintf(pipe, "plot '%s' using 1:2 title 'Left (peak hold)' with lines lc rgb 'red', \
             '%s' using 1:3 title 'Right (peak hold)' with lines lc rgb 'navy'", outfilename, outfilename);
