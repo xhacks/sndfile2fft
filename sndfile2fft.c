@@ -10,6 +10,9 @@ char 		*progname, *infilename, *outfilename ;
 
 // TODO run with larges and small window?
 
+#define ONLY_TEST_AUDIBLE_RANGE 1
+#define AUDIBLE_RANGE_TOP 20000
+
 #define GLITCH_THRESH (-85)
 
 #define MAX_BLOCK_SIZE  102400
@@ -286,14 +289,17 @@ static void convert_to_fft(SNDFILE * infile, FILE * outfile, int channels)
         
         for(int i = 0; i < BLOCK_SIZE; i++)
         {
-            if((i < (peakIndex-PEAK_RANGE)) || (i > (peakIndex+PEAK_RANGE)))
+            if ((ONLY_TEST_AUDIBLE_RANGE && ((i * g_div) < AUDIBLE_RANGE_TOP)) || !ONLY_TEST_AUDIBLE_RANGE)
             {
-                if(peakhold[c][i] > -200)
+                if((i < (peakIndex-PEAK_RANGE)) || (i > (peakIndex+PEAK_RANGE)))
                 {
-                    otherEnergy[c] -= peakhold[c][i];
-                    othercount++;
+                    if(peakhold[c][i] > -200)
+                    {
+                        otherEnergy[c] -= peakhold[c][i];
+                        othercount++;
+                    }
                 }
-            } 
+            }
         }
 
         peakEnergy[c] /= (PEAK_RANGE*2+1);
@@ -386,11 +392,16 @@ main (int argc, char * argv [])
      
 	convert_to_fft(infile, outfile, sfinfo.channels) ;
 
-     if(plot)
+#if ONLY_TEST_AUDIBLE_RANGE
+#define PLOT_RANGE AUDIBLE_RANGE_TOP
+#else
+#define PLOT_RANGE MAX_BLOCK_SIZE
+#endif
+    if(plot)
     {
         FILE *pipe = popen("gnuplot ","w");
         fprintf(pipe, "set xtic auto; set ytic auto; set title 'Spectrum (%s)'; set ylabel 'Relative Amp (dB)'; \
-        set xlabel 'Freq (Hz)'; set xr[0:20000]; set yr [-140:1];",infilename );
+        set xlabel 'Freq (Hz)'; set xr[0:%d]; set yr [-140:1];", infilename, PLOT_RANGE);
 
         fprintf(pipe, "set arrow from %d,-140 to %d,-120 lc rgb 'red';", g_peakIndex[0], g_peakIndex[0]);
         fprintf(pipe, "set label '%d Hz' at %d,-138;", g_peakIndex[0], g_peakIndex[0]);
