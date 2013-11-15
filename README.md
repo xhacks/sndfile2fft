@@ -40,3 +40,4 @@ TODO
   * Could do with command line options for the various options
   * Needs tidy up - Very hacky! 
   * Check detected peaks dont move
+  * Everything in the github issues list for this repo
